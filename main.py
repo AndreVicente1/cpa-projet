@@ -9,19 +9,18 @@ def main():
     pygame.display.set_caption("Puyo Puyo Game")
     
     clock = pygame.time.Clock()
-    game = Game()
+    game = Game(screen)
 
-    # Main game loop
+
     running = True
     while running:
-        # Capture et traitement des événements clavier et autres
         game.handle_events()
-
+        running = game.running
         game.update()
         game.draw(screen)
 
         pygame.display.flip()
-        clock.tick(FPS)
+        clock.tick(FPS) 
 
     pygame.quit()
     sys.exit()
