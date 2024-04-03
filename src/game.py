@@ -18,8 +18,10 @@ class Game:
         self.clock = pygame.time.Clock()
         self.drop_speed = 0.1
         self.last_drop_time = pygame.time.get_ticks()
-        self.spawn_puyo()
         self.screen = screen
+        self.spawn_puyo()
+        
+    
 
     def spawn_puyo(self):
         color_key = random.choice(list(COLORS.keys()))
@@ -33,13 +35,17 @@ class Game:
 
     def handle_events(self):
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 self.running = False
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT or event.key == pygame.K_a:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_q:
                     self.move_puyo(-1)
                 elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                     self.move_puyo(1)
+                if event.key == pygame.K_l:
+                    self.current_puyo.rotate("left")
+                elif event.key == pygame.K_m:
+                    self.current_puyo.rotate("right")
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_DOWN]:
@@ -85,6 +91,7 @@ class Game:
         if y < 12:
             self.board[y][x] = self.current_puyo.color
         self.check_for_matches()
+        
 
     # Fonction de recherche en profondeur pour trouver des groupes de puyos de la même couleur
     def dfs(self, x, y, color, visited):
@@ -120,14 +127,19 @@ class Game:
                             self.spawn_moving_puyo(self.board[above_y][x], [x, above_y])
                             self.board[above_y][x] = None 
                             break  
-
-
+    # on regarde si un puyo est posé sur la ligne 0                    
+    def DetectDefeat(self):
+        for x in range(len(self.board[0])):
+            if self.board[0][x] is not None:
+                self.running = False
+                break
 
     def update(self):
         current_time = pygame.time.get_ticks()
         if current_time - self.last_drop_time > self.drop_speed * 5:  
             self.drop_puyo()
             self.update_moving_puyos()
+            self.DetectDefeat()
             self.last_drop_time = current_time
         
 
@@ -153,7 +165,12 @@ class Puyo:
     def __init__(self, color, position):
         self.color = color 
         self.position = list(position) 
-        
+    
+class PuyoPiece:
+    def __init__(self, color1, position1, color2, position2):
+        self.puyo1 = Puyo(color1, position1)
+        self.puyo2 = Puyo(color2, position2)
+        self.orientation = 0  
 
 if __name__ == "__main__":
     pygame.init()
