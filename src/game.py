@@ -152,8 +152,10 @@ class Game:
                 elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                     self.move_puyo(1)
                 if event.key == pygame.K_l:
+                    self.play_rotate_sound()
                     self.current_puyo.rotate("left")
                 elif event.key == pygame.K_m:
+                    self.play_rotate_sound()
                     self.current_puyo.rotate("right")
 
         keys = pygame.key.get_pressed()
@@ -216,7 +218,7 @@ class Game:
         x2, y2 = int(self.current_puyo.puyo2.position[0]), int(self.current_puyo.puyo2.position[1])
         if y2 < 12:
             self.board[y2][x2] = self.current_puyo.puyo2.color
-
+        self.play_place_sound()
         self.check_for_matches()
 
     # Fonction de recherche en profondeur pour trouver des groupes de puyos de la même couleur
@@ -263,12 +265,12 @@ class Game:
     def play_combo_sound(self, combo_level):
         sound_map = {
             1: 'assets/sounds/Global/VAB_00016_rensa_1.wav',
-            2: 'assets/sounds/Global/VAB_00016_rensa_2.wav',
-            3: 'assets/sounds/Global/VAB_00016_rensa_3.wav',
-            4: 'assets/sounds/Global/VAB_00016_rensa_4.wav',
-            5: 'assets/sounds/Global/VAB_00016_rensa_5.wav',
-            6: 'assets/sounds/Global/VAB_00016_rensa_6.wav',
-            7: 'assets/sounds/Global/VAB_00016_rensa_7.wav',
+            2: 'assets/sounds/Global/VAB_00017_rensa_2.wav',
+            3: 'assets/sounds/Global/VAB_00018_rensa_3.wav',
+            4: 'assets/sounds/Global/VAB_00019_rensa_4.wav',
+            5: 'assets/sounds/Global/VAB_00020_rensa_5.wav',
+            6: 'assets/sounds/Global/VAB_00021_rensa_6.wav',
+            7: 'assets/sounds/Global/VAB_00022_rensa_7.wav',
         }
         if combo_level > 7:
             combo_level = 7
@@ -279,7 +281,16 @@ class Game:
             sound.play()
         except Exception as e:
             print(f"Error playing sound: {e}")
-                       
+
+    def play_rotate_sound(self):
+        sound = pygame.mixer.Sound('assets/sounds/Global/VAB_00000_puyo_kaiten.wav')
+        sound.set_volume(0.02)
+        sound.play()
+    def play_place_sound(self):
+        sound = pygame.mixer.Sound('assets/sounds/Global/VAB_00001_puyo_chakuchi.wav')
+        sound.set_volume(0.03)
+        sound.play()
+
     # on regarde si un puyo est posé sur la ligne 0                    
     def DetectDefeat(self):
         for x in range(len(self.board[0])):
