@@ -3,6 +3,7 @@ import sys
 from src.game import Game
 from src.settings import SCREEN_WIDTH, SCREEN_HEIGHT, FPS
 
+#python3 -m PyInstaller --onefile --windowed --add-data "assets;assets" main.py 
 def draw_menu(screen):
     screen.fill((0, 0, 0))
     font = pygame.font.SysFont(None, 55)

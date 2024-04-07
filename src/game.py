@@ -1,8 +1,19 @@
 import math
+import os
+import sys
 import time
 import pygame
 import random
 from src.settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, FPS
+
+def get_asset_path(relative_path):
+    """Constructs a path to the given asset, which is valid whether the
+    application is frozen or run as a Python script."""
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
 PUYO_COLORS = ['red', 'green', 'blue', 'yellow', 'purple']
 PUYO_COLOR_MAP = {
@@ -21,16 +32,17 @@ MOVING_PUYO_COLOR_MAP = {
 }
 
 EXPLOSION_TEXTURE_MAP = {
-    'red': 'assets/images/explosion/puyo_explosion_red.png',
-    'green': 'assets/images/explosion/puyo_explosion_green.png',
-    'blue': 'assets/images/explosion/puyo_explosion_blue.png',
-    'yellow': 'assets/images/explosion/puyo_explosion_yellow.png',
-    'purple': 'assets/images/explosion/puyo_explosion_purple.png'
+    'red': get_asset_path(os.path.join('assets', 'images','explosion', 'puyo_explosion_red.png')),
+    'green': get_asset_path(os.path.join('assets', 'images','explosion', 'puyo_explosion_green.png')),
+    'blue': get_asset_path(os.path.join('assets', 'images','explosion', 'puyo_explosion_blue.png')),
+    'yellow': get_asset_path(os.path.join('assets', 'images','explosion', 'puyo_explosion_yellow.png')),
+    'purple': get_asset_path(os.path.join('assets', 'images','explosion', 'puyo_explosion_purple.png'))
 }
 
 class Game:
     def __init__(self,screen):
-        pygame.mixer.music.load('assets/music/vocal.mp3')
+        
+        pygame.mixer.music.load(get_asset_path(os.path.join('assets', 'music', 'vocal.mp3')))
         pygame.mixer.music.set_volume(0.01)  
         pygame.mixer.music.play(loops=-1) 
         self.running = True
@@ -45,8 +57,8 @@ class Game:
         self.drop_speed = 0.05
         self.last_drop_time = pygame.time.get_ticks()
         self.screen = screen
-        self.texture = pygame.image.load('assets/images/puyos_tile.png').convert_alpha()  
-        self.cross_texture = pygame.image.load('assets/images/redcross.png').convert_alpha()  
+        self.texture = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'puyos_tile.png'))).convert_alpha()  
+        self.cross_texture = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'redcross.png'))).convert_alpha()  
         self.scale_factor = 3
         self.expl_scale_factor = 2
         self.puyo_size = 16
@@ -295,13 +307,13 @@ class Game:
                         
     def play_combo_sound(self, combo_level):
         sound_map = {
-            1: 'assets/sounds/Global/VAB_00016_rensa_1.wav',
-            2: 'assets/sounds/Global/VAB_00017_rensa_2.wav',
-            3: 'assets/sounds/Global/VAB_00018_rensa_3.wav',
-            4: 'assets/sounds/Global/VAB_00019_rensa_4.wav',
-            5: 'assets/sounds/Global/VAB_00020_rensa_5.wav',
-            6: 'assets/sounds/Global/VAB_00021_rensa_6.wav',
-            7: 'assets/sounds/Global/VAB_00022_rensa_7.wav',
+            1: get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00016_rensa_1.wav')),
+            2: get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00017_rensa_2.wav')),
+            3: get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00018_rensa_3.wav')),
+            4: get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00019_rensa_4.wav')),
+            5: get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00020_rensa_5.wav')),
+            6: get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00021_rensa_6.wav')),
+            7: get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00022_rensa_7.wav')),
         }
         if combo_level > 7:
             combo_level = 7
@@ -314,11 +326,12 @@ class Game:
             print(f"Error playing sound: {e}")
 
     def play_rotate_sound(self):
-        sound = pygame.mixer.Sound('assets/sounds/Global/VAB_00000_puyo_kaiten.wav')
+        
+        sound = pygame.mixer.Sound(get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00000_puyo_kaiten.wav')))
         sound.set_volume(0.02)
         sound.play()
     def play_place_sound(self):
-        sound = pygame.mixer.Sound('assets/sounds/Global/VAB_00001_puyo_chakuchi.wav')
+        sound = pygame.mixer.Sound(get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00001_puyo_chakuchi.wav')))
         sound.set_volume(0.03)
         sound.play()
 
