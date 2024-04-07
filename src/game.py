@@ -1,3 +1,4 @@
+import time
 import pygame
 import random
 from src.settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, FPS
@@ -20,11 +21,11 @@ MOVING_PUYO_COLOR_MAP = {
 
 # Ajout de la carte des textures d'explosion
 EXPLOSION_TEXTURE_MAP = {
-    'red': 'assets/Explosions/puyo_explosion_red.png',
-    'green': 'assets/Explosions/puyo_explosion_green.png',
-    'blue': 'assets/Explosions/puyo_explosion_blue.png',
-    'yellow': 'assets/Explosions/puyo_explosion_yellow.png',
-    'purple': 'assets/Explosions/puyo_explosion_purple.png'
+    'red': 'assets/images/explosion/puyo_explosion_red.png',
+    'green': 'assets/images/explosion/puyo_explosion_green.png',
+    'blue': 'assets/images/explosion/puyo_explosion_blue.png',
+    'yellow': 'assets/images/explosion/puyo_explosion_yellow.png',
+    'purple': 'assets/images/explosion/puyo_explosion_purple.png'
 }
 
 class Game:
@@ -38,13 +39,54 @@ class Game:
         self.current_puyo = None
         self.next_puyo = None
         self.clock = pygame.time.Clock()
-        self.drop_speed = 0.1
+        self.drop_speed = 0.07
         self.last_drop_time = pygame.time.get_ticks()
         self.screen = screen
-        self.texture = pygame.image.load('assets/images/puyos_tile.png').convert_alpha()  # Charger l'image de texture
+        self.texture = pygame.image.load('assets/images/puyos_tile.png').convert_alpha()  
         self.scale_factor = 3
+        self.expl_scale_factor = 2
         self.puyo_size = 16
+        self.explosion_textures = {color: pygame.image.load(path).convert_alpha() for color, path in EXPLOSION_TEXTURE_MAP.items()}
+        self.explosions = []
         self.spawn_puyo()
+
+
+    def spawn_explosion(self, color, position):
+        
+        self.explosions.append({
+            'color': color,
+            'position': position,
+            'frame_index': 0,
+            'start_time': pygame.time.get_ticks()
+        })
+
+    def update_explosions(self):
+       
+        for explosion in self.explosions[:]:
+            time_elapsed = pygame.time.get_ticks() - explosion['start_time']
+            
+            explosion['frame_index'] = time_elapsed // 150
+            if explosion['frame_index'] >= 4: 
+                self.explosions.remove(explosion)
+
+    def draw_explosion(self, screen, explosion):
+        texture = self.explosion_textures[explosion['color']]
+        frame_width = 32  
+        frame_height = texture.get_height()  
+
+        offset_x = explosion['frame_index'] * frame_width
+        source_rect = pygame.Rect(offset_x, 0, frame_width, frame_height)
+
+        position = explosion['position']
+        destination_x = position[0] * self.puyo_size * self.scale_factor 
+        destination_y = position[1] * self.puyo_size * self.scale_factor
+        destination_width = frame_width * self.expl_scale_factor
+        destination_height = frame_height * self.expl_scale_factor
+        destination_rect = pygame.Rect(destination_x, destination_y, destination_width, destination_height)
+
+        scaled_explosion = pygame.transform.scale(texture.subsurface(source_rect), (destination_width, destination_height))
+        screen.blit(scaled_explosion, destination_rect.topleft)
+
     
     def draw_puyo(self, screen, color_key, position, is_moving=False):
         if is_moving:
@@ -70,7 +112,6 @@ class Game:
 
     def spawn_puyo(self):
         color_key1, color_key2 = random.sample(PUYO_COLORS, 2)
-        color1, color2 = PUYO_COLOR_MAP[color_key1], PUYO_COLOR_MAP[color_key2]
         position1, position2 = (3, 0), (4, 0)
         self.current_puyo = PuyoPiece(color_key1, position1, color_key2, position2)
 
@@ -96,7 +137,7 @@ class Game:
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.drop_speed = 0.3
         else:
-            self.drop_speed = 0.1
+            self.drop_speed = 0.07
 
     def move_puyo(self, direction):
         new_position1 = [self.current_puyo.puyo1.position[0] + direction, self.current_puyo.puyo1.position[1]]
@@ -176,6 +217,8 @@ class Game:
                     positions = self.dfs(x, y, self.board[y][x], visited)
                     if len(positions) >= 4:  # Si un groupe de 4 ou plus est trouvé
                         to_remove.update(positions)
+                        for pos in positions:  # Déclencher une explosion pour chaque Puyo à supprimer
+                            self.spawn_explosion(self.board[pos[1]][pos[0]], pos)
                 
                             
         for y, x in to_remove:
@@ -204,8 +247,12 @@ class Game:
         if current_time - self.last_drop_time > self.drop_speed * 5:  
             self.drop_puyo()
             self.update_moving_puyos()
+            self.update_explosions()
+            if not self.current_puyo:
+                self.spawn_puyo()
             self.DetectDefeat()
             self.last_drop_time = current_time
+            
         
 
     def draw_board(self, screen):
@@ -224,6 +271,10 @@ class Game:
         # Dessine les puyos en mouvement
         for puyo in self.moving_puyos:
             self.draw_puyo(screen, puyo.color, puyo.position, is_moving=True)
+
+        for explosion in self.explosions:
+            self.draw_explosion(screen, explosion)
+
         pygame.display.flip()
 
 class Puyo:
