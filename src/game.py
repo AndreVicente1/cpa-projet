@@ -2,9 +2,14 @@ import pygame
 import random
 from src.settings import SCREEN_WIDTH, SCREEN_HEIGHT, BLACK, FPS
 
-
-COLORS = {'red': (255, 0, 0), 'green': (0, 255, 0), 'blue': (0, 0, 255), 'yellow': (255, 255, 0), 'purple': (128, 0, 128)}
-
+PUYO_COLORS = ['red', 'green', 'blue', 'yellow', 'purple']
+PUYO_COLOR_MAP = {
+    'red': (3, 1),
+    'green': (3, 7),
+    'blue': (3, 4),
+    'yellow': (3, 10),
+    'purple': (3, 13)
+}
 class Game:
     def __init__(self,screen):
         self.running = True
@@ -19,15 +24,34 @@ class Game:
         self.drop_speed = 0.1
         self.last_drop_time = pygame.time.get_ticks()
         self.screen = screen
+        self.texture = pygame.image.load('assets/images/puyos_tile.png').convert_alpha()  # Charger l'image de texture
+        self.scale_factor = 3
+        self.puyo_size = 16
         self.spawn_puyo()
-        
     
+    def draw_puyo(self, screen, color_key, position):
+        texture_pos = PUYO_COLOR_MAP[color_key]
+        source_x = texture_pos[0] * self.puyo_size
+        source_y = texture_pos[1] * self.puyo_size
+        source_rect = pygame.Rect(source_x, source_y, self.puyo_size, self.puyo_size)
+        destination_rect = pygame.Rect(
+            position[0] * self.puyo_size * self.scale_factor,
+            position[1] * self.puyo_size * self.scale_factor,
+            self.puyo_size * self.scale_factor,
+            self.puyo_size * self.scale_factor
+        )
+        scaled_puyo = pygame.transform.scale(
+            self.texture.subsurface(source_rect),
+            (self.puyo_size * self.scale_factor, self.puyo_size * self.scale_factor)
+        )
+        screen.blit(scaled_puyo, destination_rect.topleft)
+        
 
     def spawn_puyo(self):
-        color_key = random.choice(list(COLORS.keys()))
-        color = COLORS[color_key]
-        position = (3, 0)
-        self.current_puyo = Puyo(color, position)
+        color_key1, color_key2 = random.sample(PUYO_COLORS, 2)
+        color1, color2 = PUYO_COLOR_MAP[color_key1], PUYO_COLOR_MAP[color_key2]
+        position1, position2 = (3, 0), (4, 0)
+        self.current_puyo = PuyoPiece(color_key1, position1, color_key2, position2)
 
     def spawn_moving_puyo(self, color, start_pos):
         moving_puyo = Puyo(color, start_pos)
@@ -48,18 +72,21 @@ class Game:
                     self.current_puyo.rotate("right")
 
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_DOWN]:
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.drop_speed = 0.3
         else:
             self.drop_speed = 0.1
 
- 
-
     def move_puyo(self, direction):
-        new_x = self.current_puyo.position[0] + direction
-        new_y = self.current_puyo.position[1] 
-        if 0 <= new_x < 6 and not self.is_collision((new_x, int(new_y))):
-            self.current_puyo.position[0] = new_x
+        new_position1 = [self.current_puyo.puyo1.position[0] + direction, self.current_puyo.puyo1.position[1]]
+        new_position2 = [self.current_puyo.puyo2.position[0] + direction, self.current_puyo.puyo2.position[1]]
+        
+        if (0 <= new_position1[0] < 6 and 0 <= new_position2[0] < 6 and
+                not self.is_collision((new_position1[0], int(new_position1[1]))) and
+                not self.is_collision((new_position2[0], int(new_position2[1])))):
+            self.current_puyo.puyo1.position[0] += direction
+            self.current_puyo.puyo2.position[0] += direction
+
             
     
     def update_moving_puyos(self):
@@ -72,12 +99,22 @@ class Game:
                 self.check_for_matches() 
 
     def drop_puyo(self):
-        self.current_puyo.position[1] += self.drop_speed
-        rounded_y = int(round(self.current_puyo.position[1]))
-        if self.is_collision((self.current_puyo.position[0], rounded_y + 1)): 
-            self.current_puyo.position[1] = max(rounded_y, 0)  
+        self.current_puyo.puyo1.position[1] += self.drop_speed
+        self.current_puyo.puyo2.position[1] += self.drop_speed
+
+        rounded_y1 = int(round(self.current_puyo.puyo1.position[1]))
+        rounded_y2 = int(round(self.current_puyo.puyo2.position[1]))
+
+        collision1 = self.is_collision((self.current_puyo.puyo1.position[0], rounded_y1 + 1))
+        collision2 = self.is_collision((self.current_puyo.puyo2.position[0], rounded_y2 + 1))
+
+        if collision1 or collision2:
+            self.current_puyo.puyo1.position[1] = max(rounded_y1, 0)
+            self.current_puyo.puyo2.position[1] = max(rounded_y2, 0)
+            
             self.place_puyo()
             self.spawn_puyo()
+
 
     def is_collision(self, position):
         x, y = position
@@ -87,11 +124,15 @@ class Game:
         return False
 
     def place_puyo(self):
-        x, y = int(self.current_puyo.position[0]), int(self.current_puyo.position[1])
-        if y < 12:
-            self.board[y][x] = self.current_puyo.color
+        x1, y1 = int(self.current_puyo.puyo1.position[0]), int(self.current_puyo.puyo1.position[1])
+        if y1 < 12:
+            self.board[y1][x1] = self.current_puyo.puyo1.color
+
+        x2, y2 = int(self.current_puyo.puyo2.position[0]), int(self.current_puyo.puyo2.position[1])
+        if y2 < 12:
+            self.board[y2][x2] = self.current_puyo.puyo2.color
+
         self.check_for_matches()
-        
 
     # Fonction de recherche en profondeur pour trouver des groupes de puyos de la même couleur
     def dfs(self, x, y, color, visited):
@@ -127,6 +168,7 @@ class Game:
                             self.spawn_moving_puyo(self.board[above_y][x], [x, above_y])
                             self.board[above_y][x] = None 
                             break  
+
     # on regarde si un puyo est posé sur la ligne 0                    
     def DetectDefeat(self):
         for x in range(len(self.board[0])):
@@ -147,19 +189,19 @@ class Game:
         for y, row in enumerate(self.board):
             for x, color in enumerate(row):
                 if color:
-                    pygame.draw.circle(screen, color, (x * 40 + 50, y * 40 ), 20)
+                    self.draw_puyo(screen, color, (x, y))
 
-    def draw(self,screen):
+    def draw(self, screen):
         screen.fill(BLACK)
         self.draw_board(screen)
         if self.current_puyo:
-            pygame.draw.circle(screen, self.current_puyo.color, (self.current_puyo.position[0] * 40 + 50, self.current_puyo.position[1] * 40 ), 20)
+            # Dessine les deux puyos de la pièce actuelle
+            self.draw_puyo(screen, self.current_puyo.puyo1.color, self.current_puyo.puyo1.position)
+            self.draw_puyo(screen, self.current_puyo.puyo2.color, self.current_puyo.puyo2.position)
+        # Dessine les puyos en mouvement
         for puyo in self.moving_puyos:
-            pygame.draw.circle(screen, puyo.color, (int(puyo.position[0] * 40 + 50), int(puyo.position[1] * 40)), 20)
+            self.draw_puyo(screen, puyo.color, puyo.position)
         pygame.display.flip()
-
-    
-            
 
 class Puyo:
     def __init__(self, color, position):
@@ -170,7 +212,22 @@ class PuyoPiece:
     def __init__(self, color1, position1, color2, position2):
         self.puyo1 = Puyo(color1, position1)
         self.puyo2 = Puyo(color2, position2)
-        self.orientation = 0  
+        self.rotation_state = 0
+    def rotate(self, direction):
+        if direction == "right":
+            self.rotation_state = (self.rotation_state + 1) % 4
+        elif direction == "left":
+            self.rotation_state = (self.rotation_state - 1) % 4
+        if self.rotation_state == 0:  
+            self.puyo2.position = [self.puyo1.position[0] + 1, self.puyo1.position[1]]
+        elif self.rotation_state == 1:  
+            self.puyo2.position = [self.puyo1.position[0], self.puyo1.position[1] + 1]
+        elif self.rotation_state == 2:  
+            self.puyo2.position = [self.puyo1.position[0] - 1, self.puyo1.position[1]]
+        elif self.rotation_state == 3:  
+            self.puyo2.position = [self.puyo1.position[0], self.puyo1.position[1] - 1]
+
+        
 
 if __name__ == "__main__":
     pygame.init()
