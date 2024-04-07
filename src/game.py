@@ -10,6 +10,23 @@ PUYO_COLOR_MAP = {
     'yellow': (3, 10),
     'purple': (3, 13)
 }
+MOVING_PUYO_COLOR_MAP = {
+    'red': (12, 1),
+    'green': (12, 7),
+    'blue': (12, 4),
+    'yellow': (12, 10),
+    'purple': (12, 13)
+}
+
+# Ajout de la carte des textures d'explosion
+EXPLOSION_TEXTURE_MAP = {
+    'red': 'assets/Explosions/puyo_explosion_red.png',
+    'green': 'assets/Explosions/puyo_explosion_green.png',
+    'blue': 'assets/Explosions/puyo_explosion_blue.png',
+    'yellow': 'assets/Explosions/puyo_explosion_yellow.png',
+    'purple': 'assets/Explosions/puyo_explosion_purple.png'
+}
+
 class Game:
     def __init__(self,screen):
         self.running = True
@@ -29,8 +46,12 @@ class Game:
         self.puyo_size = 16
         self.spawn_puyo()
     
-    def draw_puyo(self, screen, color_key, position):
-        texture_pos = PUYO_COLOR_MAP[color_key]
+    def draw_puyo(self, screen, color_key, position, is_moving=False):
+        if is_moving:
+            texture_pos = MOVING_PUYO_COLOR_MAP[color_key]
+        else:
+            texture_pos = PUYO_COLOR_MAP[color_key]
+
         source_x = texture_pos[0] * self.puyo_size
         source_y = texture_pos[1] * self.puyo_size
         source_rect = pygame.Rect(source_x, source_y, self.puyo_size, self.puyo_size)
@@ -45,7 +66,7 @@ class Game:
             (self.puyo_size * self.scale_factor, self.puyo_size * self.scale_factor)
         )
         screen.blit(scaled_puyo, destination_rect.topleft)
-        
+
 
     def spawn_puyo(self):
         color_key1, color_key2 = random.sample(PUYO_COLORS, 2)
@@ -155,6 +176,8 @@ class Game:
                     positions = self.dfs(x, y, self.board[y][x], visited)
                     if len(positions) >= 4:  # Si un groupe de 4 ou plus est trouvé
                         to_remove.update(positions)
+                
+                            
         for y, x in to_remove:
             self.board[x][y] = None
             self.draw_board(self.screen)
@@ -189,18 +212,18 @@ class Game:
         for y, row in enumerate(self.board):
             for x, color in enumerate(row):
                 if color:
-                    self.draw_puyo(screen, color, (x, y))
+                    self.draw_puyo(screen, color, (x, y),is_moving=False)
 
     def draw(self, screen):
         screen.fill(BLACK)
         self.draw_board(screen)
         if self.current_puyo:
             # Dessine les deux puyos de la pièce actuelle
-            self.draw_puyo(screen, self.current_puyo.puyo1.color, self.current_puyo.puyo1.position)
-            self.draw_puyo(screen, self.current_puyo.puyo2.color, self.current_puyo.puyo2.position)
+            self.draw_puyo(screen, self.current_puyo.puyo1.color, self.current_puyo.puyo1.position, is_moving=False)
+            self.draw_puyo(screen, self.current_puyo.puyo2.color, self.current_puyo.puyo2.position,is_moving=False)
         # Dessine les puyos en mouvement
         for puyo in self.moving_puyos:
-            self.draw_puyo(screen, puyo.color, puyo.position)
+            self.draw_puyo(screen, puyo.color, puyo.position, is_moving=True)
         pygame.display.flip()
 
 class Puyo:
@@ -226,8 +249,6 @@ class PuyoPiece:
             self.puyo2.position = [self.puyo1.position[0] - 1, self.puyo1.position[1]]
         elif self.rotation_state == 3:  
             self.puyo2.position = [self.puyo1.position[0], self.puyo1.position[1] - 1]
-
-        
 
 if __name__ == "__main__":
     pygame.init()
