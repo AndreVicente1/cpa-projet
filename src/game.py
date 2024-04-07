@@ -19,7 +19,6 @@ MOVING_PUYO_COLOR_MAP = {
     'purple': (12, 13)
 }
 
-# Ajout de la carte des textures d'explosion
 EXPLOSION_TEXTURE_MAP = {
     'red': 'assets/images/explosion/puyo_explosion_red.png',
     'green': 'assets/images/explosion/puyo_explosion_green.png',
@@ -46,28 +45,50 @@ class Game:
         self.scale_factor = 3
         self.expl_scale_factor = 2
         self.puyo_size = 16
+        
         self.explosion_textures = {color: pygame.image.load(path).convert_alpha() for color, path in EXPLOSION_TEXTURE_MAP.items()}
         self.explosions = []
+
+        self.explosion_delay_started = False
+        self.explosion_delay = 600  # Délai en millisecondes après la fin des explosions
+        self.last_explosion_end_time = None
+        self.allow_puyo_drop = True  # Permet de contrôler si les Puyos peuvent tomber
+
         self.spawn_puyo()
 
 
     def spawn_explosion(self, color, position):
-        
+        current_time = pygame.time.get_ticks()
         self.explosions.append({
             'color': color,
             'position': position,
             'frame_index': 0,
-            'start_time': pygame.time.get_ticks()
+            'start_time': current_time,
+            'delay_start': current_time,  # Enregistre le début du délai après l'explosion
+            'delay_passed': False  # Indicateur si le délai après explosion est passé
         })
 
     def update_explosions(self):
-       
+        current_time = pygame.time.get_ticks()
+        allow_puyo_drop = True
+        
         for explosion in self.explosions[:]:
-            time_elapsed = pygame.time.get_ticks() - explosion['start_time']
-            
+            time_elapsed = current_time - explosion['start_time']
             explosion['frame_index'] = time_elapsed // 150
-            if explosion['frame_index'] >= 4: 
-                self.explosions.remove(explosion)
+
+            if explosion['frame_index'] >= 4:
+                if not explosion['delay_passed'] and current_time - explosion['delay_start'] < self.explosion_delay:
+                    allow_puyo_drop = False 
+                    explosion['delay_passed'] = True 
+                elif current_time - explosion['delay_start'] >= self.explosion_delay:
+                    # Le délai est passé, l'explosion peut être retirée
+                    self.explosions.remove(explosion)
+                else:
+                    allow_puyo_drop = False
+            else:
+                allow_puyo_drop = False  # Une explosion est toujours en cours, pas de chute des Puyos
+
+        self.allow_puyo_drop = allow_puyo_drop
 
     def draw_explosion(self, screen, explosion):
         texture = self.explosion_textures[explosion['color']]
@@ -215,9 +236,9 @@ class Game:
             for x in range(cols):
                 if self.board[y][x] is not None and (x, y) not in visited:
                     positions = self.dfs(x, y, self.board[y][x], visited)
-                    if len(positions) >= 4:  # Si un groupe de 4 ou plus est trouvé
+                    if len(positions) >= 4:
                         to_remove.update(positions)
-                        for pos in positions:  # Déclencher une explosion pour chaque Puyo à supprimer
+                        for pos in positions:
                             self.spawn_explosion(self.board[pos[1]][pos[0]], pos)
                 
                             
@@ -244,16 +265,16 @@ class Game:
 
     def update(self):
         current_time = pygame.time.get_ticks()
-        if current_time - self.last_drop_time > self.drop_speed * 5:  
-            self.drop_puyo()
-            self.update_moving_puyos()
-            self.update_explosions()
-            if not self.current_puyo:
-                self.spawn_puyo()
-            self.DetectDefeat()
-            self.last_drop_time = current_time
-            
-        
+        self.update_explosions()
+
+        if self.allow_puyo_drop:
+            if current_time - self.last_drop_time > (self.drop_speed * 5):  
+                self.drop_puyo()
+                self.update_moving_puyos()
+                if not self.current_puyo:
+                    self.spawn_puyo()
+                self.DetectDefeat()
+                self.last_drop_time = current_time
 
     def draw_board(self, screen):
         for y, row in enumerate(self.board):
