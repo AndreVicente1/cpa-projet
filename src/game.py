@@ -1,3 +1,4 @@
+import math
 import time
 import pygame
 import random
@@ -41,10 +42,11 @@ class Game:
         self.current_puyo = None
         self.next_puyo = None
         self.clock = pygame.time.Clock()
-        self.drop_speed = 0.07
+        self.drop_speed = 0.05
         self.last_drop_time = pygame.time.get_ticks()
         self.screen = screen
         self.texture = pygame.image.load('assets/images/puyos_tile.png').convert_alpha()  
+        self.cross_texture = pygame.image.load('assets/images/redcross.png').convert_alpha()  
         self.scale_factor = 3
         self.expl_scale_factor = 2
         self.puyo_size = 16
@@ -53,10 +55,17 @@ class Game:
         self.explosions = []
         self.combo_counter = 0
         
+        self.cross_texture = pygame.transform.scale(self.cross_texture, (self.puyo_size * self.scale_factor, self.puyo_size * self.scale_factor))
+
         self.explosion_delay_started = False
-        self.explosion_delay = 600  # Délai en millisecondes après la fin des explosions
+        self.explosion_delay = 600  
         self.last_explosion_end_time = None
         self.allow_puyo_drop = True  # Permet de contrôler si les Puyos peuvent tomber
+
+
+        self.rotation_since_last_collision = 0
+        self.max_rotations_before_lock = 5
+        self.lock_delay = 1000
 
         self.spawn_puyo()
 
@@ -154,18 +163,24 @@ class Game:
                     self.move_puyo(-1)
                 elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
                     self.move_puyo(1)
-                if event.key == pygame.K_l:
+                if event.key == pygame.K_l or event.key == pygame.K_w:
                     self.play_rotate_sound()
-                    self.current_puyo.rotate("left")
-                elif event.key == pygame.K_m:
+                    self.current_puyo.rotate("left",self.board)
+                    self.rotation_since_last_collision += 1
+                    if self.rotation_since_last_collision < self.max_rotations_before_lock:
+                        self.last_collision_time = pygame.time.get_ticks()
+                elif event.key == pygame.K_m or event.key == pygame.K_x:
                     self.play_rotate_sound()
-                    self.current_puyo.rotate("right")
+                    self.current_puyo.rotate("right",self.board)
+                    self.rotation_since_last_collision += 1
+                    if self.rotation_since_last_collision < self.max_rotations_before_lock:
+                        self.last_collision_time = pygame.time.get_ticks()
 
         keys = pygame.key.get_pressed()
         if keys[pygame.K_DOWN] or keys[pygame.K_s]:
             self.drop_speed = 0.3
         else:
-            self.drop_speed = 0.07
+            self.drop_speed = 0.05
 
     def move_puyo(self, direction):
         new_position1 = [self.current_puyo.puyo1.position[0] + direction, self.current_puyo.puyo1.position[1]]
@@ -177,8 +192,6 @@ class Game:
             self.current_puyo.puyo1.position[0] += direction
             self.current_puyo.puyo2.position[0] += direction
 
-            
-    
     def update_moving_puyos(self):
         for puyo in self.moving_puyos[:]:  
             puyo.position[1] += self.moving_puyos_speed 
@@ -188,23 +201,38 @@ class Game:
                 self.moving_puyos.remove(puyo)
                 self.check_for_matches() 
 
+    def adjust_puyo_position(self):
+        for puyo in [self.current_puyo.puyo1, self.current_puyo.puyo2]:
+            while self.is_collision((puyo.position[0], puyo.position[1])):
+                puyo.position[1] -= 1  
+
     def drop_puyo(self):
+        current_time = pygame.time.get_ticks()
+        keys = pygame.key.get_pressed() 
+        fast_drop = keys[pygame.K_DOWN] or keys[pygame.K_s]  
+
         self.current_puyo.puyo1.position[1] += self.drop_speed
         self.current_puyo.puyo2.position[1] += self.drop_speed
 
-        rounded_y1 = int(round(self.current_puyo.puyo1.position[1]))
-        rounded_y2 = int(round(self.current_puyo.puyo2.position[1]))
-
-        collision1 = self.is_collision((self.current_puyo.puyo1.position[0], rounded_y1 + 1))
-        collision2 = self.is_collision((self.current_puyo.puyo2.position[0], rounded_y2 + 1))
+        collision_marge = 0.85
+        collision1 = self.is_collision((self.current_puyo.puyo1.position[0], self.current_puyo.puyo1.position[1] + collision_marge))
+        collision2 = self.is_collision((self.current_puyo.puyo2.position[0], self.current_puyo.puyo2.position[1] + collision_marge))
 
         if collision1 or collision2:
-            self.current_puyo.puyo1.position[1] = max(rounded_y1, 0)
-            self.current_puyo.puyo2.position[1] = max(rounded_y2, 0)
-            
-            self.place_puyo()
-            self.spawn_puyo()
-
+            if fast_drop or (current_time - self.last_collision_time > self.lock_delay or self.rotation_since_last_collision >= self.max_rotations_before_lock):
+                self.current_puyo.puyo1.position[1] = math.floor(self.current_puyo.puyo1.position[1])
+                self.current_puyo.puyo2.position[1] = math.floor(self.current_puyo.puyo2.position[1])
+                self.adjust_puyo_position()
+                self.place_puyo()
+                self.spawn_puyo()
+                self.last_collision_time = pygame.time.get_ticks()
+                self.rotation_since_last_collision = 0
+            else:
+                self.current_puyo.puyo1.position[1] -= self.drop_speed
+                self.current_puyo.puyo2.position[1] -= self.drop_speed
+        else:
+            self.last_collision_time = pygame.time.get_ticks()
+            self.rotation_since_last_collision = 0
 
     def is_collision(self, position):
         x, y = position
@@ -280,7 +308,7 @@ class Game:
         sound_path = sound_map.get(combo_level)
         try:
             sound = pygame.mixer.Sound(sound_path)
-            sound.set_volume(0.2)
+            sound.set_volume(0.15)
             sound.play()
         except Exception as e:
             print(f"Error playing sound: {e}")
@@ -318,16 +346,33 @@ class Game:
         for y, row in enumerate(self.board):
             for x, color in enumerate(row):
                 if color:
-                    self.draw_puyo(screen, color, (x, y),is_moving=False)
+                    self.draw_puyo(screen, color, (x, y), is_moving=False)
+                if y == 0: 
+                    cross_pos_x = x * self.puyo_size * self.scale_factor
+                    cross_pos_y = y * self.puyo_size * self.scale_factor
+                    screen.blit(self.cross_texture, (cross_pos_x, cross_pos_y))
+
+
+    def draw_board_frame(self, screen):
+        frame_thickness = 5 
+        frame_color = (255, 255, 255)  
+        board_width = self.puyo_size * self.scale_factor * len(self.board[0]) 
+        board_height = self.puyo_size * self.scale_factor * len(self.board) 
+        
+        margin_left = -5  
+        frame_x = margin_left
+        frame_y = (SCREEN_HEIGHT - board_height) / 2 - frame_thickness -10
+        
+        frame_rect = pygame.Rect(frame_x, frame_y, board_width + frame_thickness * 2, board_height + frame_thickness * 2)
+        pygame.draw.rect(screen, frame_color, frame_rect, frame_thickness)
 
     def draw(self, screen):
         screen.fill(BLACK)
+        self.draw_board_frame(screen)
         self.draw_board(screen)
         if self.current_puyo:
-            # Dessine les deux puyos de la pièce actuelle
             self.draw_puyo(screen, self.current_puyo.puyo1.color, self.current_puyo.puyo1.position, is_moving=False)
             self.draw_puyo(screen, self.current_puyo.puyo2.color, self.current_puyo.puyo2.position,is_moving=False)
-        # Dessine les puyos en mouvement
         for puyo in self.moving_puyos:
             self.draw_puyo(screen, puyo.color, puyo.position, is_moving=True)
 
@@ -346,19 +391,43 @@ class PuyoPiece:
         self.puyo1 = Puyo(color1, position1)
         self.puyo2 = Puyo(color2, position2)
         self.rotation_state = 0
-    def rotate(self, direction):
+
+    def rotate(self, direction, board):
+        new_position = None
         if direction == "right":
-            self.rotation_state = (self.rotation_state + 1) % 4
+            if self.rotation_state == 0:
+                new_position = [self.puyo1.position[0], self.puyo1.position[1] + 1]
+            elif self.rotation_state == 1:
+                new_position = [self.puyo1.position[0] - 1, self.puyo1.position[1]]
+            elif self.rotation_state == 2:
+                new_position = [self.puyo1.position[0], self.puyo1.position[1] - 1]
+            elif self.rotation_state == 3:
+                new_position = [self.puyo1.position[0] + 1, self.puyo1.position[1]]
         elif direction == "left":
-            self.rotation_state = (self.rotation_state - 1) % 4
-        if self.rotation_state == 0:  
-            self.puyo2.position = [self.puyo1.position[0] + 1, self.puyo1.position[1]]
-        elif self.rotation_state == 1:  
-            self.puyo2.position = [self.puyo1.position[0], self.puyo1.position[1] + 1]
-        elif self.rotation_state == 2:  
-            self.puyo2.position = [self.puyo1.position[0] - 1, self.puyo1.position[1]]
-        elif self.rotation_state == 3:  
-            self.puyo2.position = [self.puyo1.position[0], self.puyo1.position[1] - 1]
+            if self.rotation_state == 0:
+                new_position = [self.puyo1.position[0], self.puyo1.position[1] - 1]
+            elif self.rotation_state == 1:
+                new_position = [self.puyo1.position[0] + 1, self.puyo1.position[1]]
+            elif self.rotation_state == 2:
+                new_position = [self.puyo1.position[0], self.puyo1.position[1] + 1]
+            elif self.rotation_state == 3:
+                new_position = [self.puyo1.position[0] - 1, self.puyo1.position[1]]
+
+        if not self.is_collision(new_position, board):
+            self.puyo2.position = new_position
+            self.rotation_state = (self.rotation_state + 1 if direction == "right" else self.rotation_state - 1) % 4
+        else:
+            #inverser les couleurs des 2 puyos 
+            self.puyo1.color, self.puyo2.color = self.puyo2.color, self.puyo1.color
+
+    def is_collision(self, position,board):
+        x, y = position
+        y = int(y)  
+        if x < 0 or x >= 6:
+            return True
+        if y >= 12 or (y >= 0 and board[y][x] is not None):
+            return True
+        return False
 
 if __name__ == "__main__":
     pygame.init()
