@@ -14,6 +14,7 @@ def draw_menu(screen):
 
 def main():
     pygame.init()
+    pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Puyo Puyo 3")
     
