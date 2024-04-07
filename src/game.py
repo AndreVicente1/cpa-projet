@@ -48,7 +48,8 @@ class Game:
         
         self.explosion_textures = {color: pygame.image.load(path).convert_alpha() for color, path in EXPLOSION_TEXTURE_MAP.items()}
         self.explosions = []
-
+        self.combo_counter = 0
+        
         self.explosion_delay_started = False
         self.explosion_delay = 600  # Délai en millisecondes après la fin des explosions
         self.last_explosion_end_time = None
@@ -132,6 +133,7 @@ class Game:
 
 
     def spawn_puyo(self):
+        self.combo_counter = 0
         color_key1, color_key2 = random.sample(PUYO_COLORS, 2)
         position1, position2 = (3, 0), (4, 0)
         self.current_puyo = PuyoPiece(color_key1, position1, color_key2, position2)
@@ -237,7 +239,9 @@ class Game:
                 if self.board[y][x] is not None and (x, y) not in visited:
                     positions = self.dfs(x, y, self.board[y][x], visited)
                     if len(positions) >= 4:
+                        self.combo_counter += 1
                         to_remove.update(positions)
+                        self.play_combo_sound(self.combo_counter)
                         for pos in positions:
                             self.spawn_explosion(self.board[pos[1]][pos[0]], pos)
                 
@@ -255,7 +259,27 @@ class Game:
                             self.spawn_moving_puyo(self.board[above_y][x], [x, above_y])
                             self.board[above_y][x] = None 
                             break  
-
+                        
+    def play_combo_sound(self, combo_level):
+        sound_map = {
+            1: 'assets/sounds/Global/VAB_00016_rensa_1.wav',
+            2: 'assets/sounds/Global/VAB_00016_rensa_2.wav',
+            3: 'assets/sounds/Global/VAB_00016_rensa_3.wav',
+            4: 'assets/sounds/Global/VAB_00016_rensa_4.wav',
+            5: 'assets/sounds/Global/VAB_00016_rensa_5.wav',
+            6: 'assets/sounds/Global/VAB_00016_rensa_6.wav',
+            7: 'assets/sounds/Global/VAB_00016_rensa_7.wav',
+        }
+        if combo_level > 7:
+            combo_level = 7
+        sound_path = sound_map.get(combo_level)
+        try:
+            sound = pygame.mixer.Sound(sound_path)
+            sound.set_volume(0.2)
+            sound.play()
+        except Exception as e:
+            print(f"Error playing sound: {e}")
+                       
     # on regarde si un puyo est posé sur la ligne 0                    
     def DetectDefeat(self):
         for x in range(len(self.board[0])):
