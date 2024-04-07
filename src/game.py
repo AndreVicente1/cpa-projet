@@ -29,6 +29,9 @@ EXPLOSION_TEXTURE_MAP = {
 
 class Game:
     def __init__(self,screen):
+        pygame.mixer.music.load('assets/music/vocal.mp3')
+        pygame.mixer.music.set_volume(0.01)  
+        pygame.mixer.music.play(loops=-1) 
         self.running = True
         self.board = [[None for _ in range(6)] for _ in range(12)]
         self.score = 0
@@ -359,8 +362,10 @@ class PuyoPiece:
 
 if __name__ == "__main__":
     pygame.init()
+
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption("Puyo Puyo Game")
+
     game = Game()
     game.run()
     pygame.quit()
