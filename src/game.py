@@ -329,7 +329,6 @@ class Game:
                 if self.board[y][x] is None:
                     for above_y in range(y - 1, -1, -1):
                         if self.board[above_y][x] is not None:
-                            
                             self.spawn_moving_puyo(self.board[above_y][x], [x, above_y])
                             self.board[above_y][x] = None 
                             break  
@@ -355,7 +354,6 @@ class Game:
             print(f"Error playing sound: {e}")
 
     def play_rotate_sound(self):
-        
         sound = pygame.mixer.Sound(get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00000_puyo_kaiten.wav')))
         sound.set_volume(0.02)
         sound.play()
@@ -374,11 +372,11 @@ class Game:
     def update(self):
         current_time = pygame.time.get_ticks()
         self.update_explosions()  
-        self.update_moving_puyos()
         if not self.moving_puyos and not self.explosions: # combo terminé
             self.update_score()
         if self.allow_puyo_drop and not self.explosions:
-            if current_time - self.last_drop_time > (self.drop_speed * 5):  
+            if current_time - self.last_drop_time > (self.drop_speed * 5):
+                self.update_moving_puyos()  
                 self.drop_puyo()
                 if not self.current_puyo:
                     self.spawn_puyo()
