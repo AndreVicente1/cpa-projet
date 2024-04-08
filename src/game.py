@@ -39,18 +39,40 @@ EXPLOSION_TEXTURE_MAP = {
     'purple': get_asset_path(os.path.join('assets', 'images','explosion', 'puyo_explosion_purple.png'))
 }
 
+FONT_NUMBER_MAP = {
+    '0': (0, 8),
+    '1': (8, 9),
+    '2': (17, 10),
+    '3': (27, 9),
+    '4': (36, 9),
+    '5': (45, 9),
+    '6': (54, 9),
+    '7': (63, 9),
+    '8': (72, 9),
+    '9': (81, 9),
+}
+FONT_LETTER_MAP = {
+    'S': {'x': 107, 'width': 9, 'row': 2},
+    'C': {'x': 107, 'width': 9, 'row': 1},
+    'O': {'x': 72, 'width': 9, 'row': 2},
+    'R': {'x': 98, 'width': 9, 'row': 2},
+    'E': {'x': 125, 'width': 9, 'row': 1}
+}
+
+
 class Game:
     def __init__(self,screen):
-        
         pygame.mixer.music.load(get_asset_path(os.path.join('assets', 'music', 'vocal.mp3')))
         pygame.mixer.music.set_volume(0.01)  
         pygame.mixer.music.play(loops=-1) 
+
         self.running = True
         self.board = [[None for _ in range(6)] for _ in range(12)]
         self.score = 0
+        self.score_pos = (350, 20)
         self.level = 1
         self.moving_puyos = []
-        self.moving_puyos_speed = 0.4
+        self.moving_puyos_speed = 0.2
         self.current_puyo = None
         self.next_puyo = None
         self.clock = pygame.time.Clock()
@@ -59,6 +81,7 @@ class Game:
         self.screen = screen
         self.texture = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'puyos_tile.png'))).convert_alpha()  
         self.cross_texture = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'redcross.png'))).convert_alpha()  
+        self.font_sprite_sheet = pygame.image.load(get_asset_path(os.path.join('assets','images','fonts_yellow.png'))).convert_alpha()
         self.scale_factor = 3
         self.expl_scale_factor = 2
         self.puyo_size = 16
@@ -115,6 +138,12 @@ class Game:
 
         self.allow_puyo_drop = allow_puyo_drop
 
+    def update_score(self):
+        for i in range(1, self.combo_counter + 1):
+            self.score += i * 10 + 10
+        self.combo_counter = 0
+        
+        
     def draw_explosion(self, screen, explosion):
         texture = self.explosion_textures[explosion['color']]
         frame_width = 32  
@@ -157,7 +186,6 @@ class Game:
 
 
     def spawn_puyo(self):
-        self.combo_counter = 0
         color_key1, color_key2 = random.sample(PUYO_COLORS, 2)
         position1, position2 = (3, 0), (4, 0)
         self.current_puyo = PuyoPiece(color_key1, position1, color_key2, position2)
@@ -344,12 +372,14 @@ class Game:
 
     def update(self):
         current_time = pygame.time.get_ticks()
-        self.update_explosions()
+        self.update_explosions()  
+        self.update_moving_puyos()
+        if not self.moving_puyos and not self.explosions: # combo terminé
+            self.update_score()
 
         if self.allow_puyo_drop:
             if current_time - self.last_drop_time > (self.drop_speed * 5):  
                 self.drop_puyo()
-                self.update_moving_puyos()
                 if not self.current_puyo:
                     self.spawn_puyo()
                 self.DetectDefeat()
@@ -379,8 +409,31 @@ class Game:
         frame_rect = pygame.Rect(frame_x, frame_y, board_width + frame_thickness * 2, board_height + frame_thickness * 2)
         pygame.draw.rect(screen, frame_color, frame_rect, frame_thickness)
 
+    def draw_score(self):
+        score_str = str(self.score)
+        x1,y1 = self.score_pos
+
+        for letter in "SCORE":
+            letter_info = FONT_LETTER_MAP[letter]
+            letter_surface = pygame.Surface((letter_info['width'], 16), pygame.SRCALPHA)
+            y = (letter_info['row'] - 1) * 16  
+            letter_surface.blit(self.font_sprite_sheet, (0, 0), (letter_info['x'], y, letter_info['width'], 16))
+            letter_surface = pygame.transform.scale(letter_surface, (letter_info['width'] * self.scale_factor, 16 * self.scale_factor))
+            self.screen.blit(letter_surface, (x1, y1))
+            x1 += letter_info['width'] * self.scale_factor
+        x1,y1 = self.score_pos
+        y1 += 17 * self.scale_factor
+        for nombre in score_str:
+            x, width = FONT_NUMBER_MAP[nombre]
+            nombre_surface = pygame.Surface((width, 16), pygame.SRCALPHA)
+            nombre_surface.blit(self.font_sprite_sheet, (0, 0), (x, 0, width, 16))
+            nombre_surface = pygame.transform.scale(nombre_surface, (width * self.scale_factor, 16 * self.scale_factor))
+            self.screen.blit(nombre_surface, (x1, y1))
+            x1 += width * self.scale_factor 
+
     def draw(self, screen):
         screen.fill(BLACK)
+        self.draw_score()
         self.draw_board_frame(screen)
         self.draw_board(screen)
         if self.current_puyo:
