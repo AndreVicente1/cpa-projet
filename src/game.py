@@ -72,7 +72,7 @@ class Game:
         self.score_pos = (350, 20)
         self.level = 1
         self.moving_puyos = []
-        self.moving_puyos_speed = 0.2
+        self.moving_puyos_speed = 0.15
         self.current_puyo = None
         self.next_puyo = None
         self.clock = pygame.time.Clock()
@@ -186,6 +186,7 @@ class Game:
 
 
     def spawn_puyo(self):
+        time.sleep(0.07)
         color_key1, color_key2 = random.sample(PUYO_COLORS, 2)
         position1, position2 = (3, 0), (4, 0)
         self.current_puyo = PuyoPiece(color_key1, position1, color_key2, position2)
@@ -376,8 +377,7 @@ class Game:
         self.update_moving_puyos()
         if not self.moving_puyos and not self.explosions: # combo terminé
             self.update_score()
-
-        if self.allow_puyo_drop:
+        if self.allow_puyo_drop and not self.explosions:
             if current_time - self.last_drop_time > (self.drop_speed * 5):  
                 self.drop_puyo()
                 if not self.current_puyo:
