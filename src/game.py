@@ -61,10 +61,17 @@ FONT_LETTER_MAP = {
 
 
 class Game:
-    def __init__(self,screen):
-        pygame.mixer.music.load(get_asset_path(os.path.join('assets', 'music', 'vocal.mp3')))
+    def __init__(self,screen,enemy= 1):
+        pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
+        if enemy == 0:
+            pygame.mixer.music.load(get_asset_path(os.path.join('assets', 'music', 'vocal.mp3')))
+            self.character = pygame.image.load(get_asset_path(os.path.join('assets', 'images',  'Screenshot_13.png'))).convert()
+        elif enemy == 1: 
+            pygame.mixer.music.load(get_asset_path(os.path.join('assets', 'music', 'OceanPrince.mp3')))
+            self.character = pygame.image.load(get_asset_path(os.path.join('assets', 'images',  'Screenshot_2.png'))).convert()
         pygame.mixer.music.set_volume(0.01)  
         pygame.mixer.music.play(loops=-1) 
+        self.enemy = enemy
 
         self.running = True
         self.board = [[None for _ in range(6)] for _ in range(12)]
@@ -82,7 +89,6 @@ class Game:
         self.texture = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'puyos_tile.png'))).convert_alpha()  
         self.cross_texture = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'redcross.png'))).convert_alpha()  
         self.font_sprite_sheet = pygame.image.load(get_asset_path(os.path.join('assets','images','fonts_yellow.png'))).convert_alpha()
-        self.character = pygame.image.load(get_asset_path(os.path.join('assets', 'images',  'Screenshot_13.png'))).convert()
         self.scale_factor = 3
         self.expl_scale_factor = 2
         self.puyo_size = 16
@@ -97,7 +103,6 @@ class Game:
         self.explosion_delay = 600  
         self.last_explosion_end_time = None
         self.allow_puyo_drop = True  # Permet de contrôler si les Puyos peuvent tomber
-
 
         self.rotation_since_last_collision = 0
         self.max_rotations_before_lock = 5
@@ -458,6 +463,14 @@ class Game:
             self.draw_explosion(screen, explosion)
 
         pygame.display.flip()
+
+    def run(self):
+        while self.running:
+            self.handle_events()
+            self.update()
+            self.draw(self.screen)
+            self.DetectDefeat()
+            self.clock.tick(FPS)
 
 class Puyo:
     def __init__(self, color, position):
