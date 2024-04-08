@@ -59,9 +59,14 @@ FONT_LETTER_MAP = {
     'E': {'x': 125, 'width': 9, 'row': 1}
 }
 
+SCORES_FOR_VICTORY = {
+    0: 100,  # Score pour gagner contre l'ennemi 0
+    1: 10000,  # Score pour gagner contre l'ennemi 1
+}
+
 
 class Game:
-    def __init__(self,screen,enemy= 0):
+    def __init__(self,screen,enemy= 1):
         pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
         if enemy == 0:
             pygame.mixer.music.load(get_asset_path(os.path.join('assets', 'music', 'vocal.mp3')))
@@ -107,6 +112,8 @@ class Game:
         self.rotation_since_last_collision = 0
         self.max_rotations_before_lock = 5
         self.lock_delay = 1000
+
+        self.has_won = False # victoire
 
         self.spawn_puyo()
     
@@ -388,6 +395,11 @@ class Game:
         sound.set_volume(0.03)
         sound.play()
 
+    def play_victory_sound(self):
+        sound = pygame.mixer.Sound(get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00008_zen_keshi.wav')))
+        sound.set_volume(0.8)
+        sound.play()
+
     # # # # # # # # # # # # # #
     #     General Gameplay    #
     # # # # # # # # # # # # # #
@@ -412,6 +424,11 @@ class Game:
                     self.spawn_puyo()
                 self.DetectDefeat()
                 self.last_drop_time = current_time
+        
+        if not self.has_won and self.score >= SCORES_FOR_VICTORY[self.enemy]:
+            self.play_victory_sound()
+            self.has_won = True
+            self.running = False
 
     def draw_board(self, screen):
         for y, row in enumerate(self.board):
@@ -469,6 +486,13 @@ class Game:
         self.character = pygame.transform.scale(self.character, (170, 170))
         self.screen.blit(self.character, (350, 130))
 
+    def draw_victory_message(self, screen):
+        if self.has_won:
+            font = pygame.font.Font(None, 100) # peut être modifier la police?
+            text = font.render("Victory!", True, (255, 255, 0))
+            text_rect = text.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2))
+            screen.blit(text, text_rect)
+
     def draw(self, screen):
         screen.fill(BLACK)
         self.draw_character()
@@ -484,6 +508,9 @@ class Game:
         for explosion in self.explosions:
             self.draw_explosion(screen, explosion)
 
+        if self.has_won:
+            self.draw_victory_message(screen)
+
         pygame.display.flip()
 
     def run(self):
@@ -493,10 +520,21 @@ class Game:
             self.draw(self.screen)
             self.DetectDefeat()
             self.clock.tick(FPS)
+        # check si le joueur a gagné, si oui appuyé sur espace pour revenir au menu
+        while self.has_won:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    self.has_won = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        self.has_won = False
+
+        pygame.display.flip()
         
-# # # # # # # # # # # # # #
-#        Puyo Class       #
-# # # # # # # # # # # # # #
+
+    # # # # # # # # # # # # # #
+    #       Puyo Class        #
+    # # # # # # # # # # # # # #
 
 class Puyo:
     def __init__(self, color, position):
