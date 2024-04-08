@@ -1504,7 +1504,12 @@
    'Files\\WindowsApps\\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\\Lib\\socketserver.py',
    'PYMODULE'),
   ('src', '-', 'PYMODULE'),
+  ('src.algorithms', '-', 'PYMODULE'),
+  ('src.algorithms.astar',
+   'D:\\cpa-projet\\src\\algorithms\\astar.py',
+   'PYMODULE'),
   ('src.game', 'D:\\cpa-projet\\src\\game.py', 'PYMODULE'),
+  ('src.map', 'D:\\cpa-projet\\src\\map.py', 'PYMODULE'),
   ('src.settings', 'D:\\cpa-projet\\src\\settings.py', 'PYMODULE'),
   ('ssl',
    'C:\\Program '

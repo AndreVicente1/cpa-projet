@@ -61,7 +61,7 @@ FONT_LETTER_MAP = {
 
 
 class Game:
-    def __init__(self,screen,enemy= 1):
+    def __init__(self,screen,enemy= 0):
         pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
         if enemy == 0:
             pygame.mixer.music.load(get_asset_path(os.path.join('assets', 'music', 'vocal.mp3')))
@@ -79,7 +79,7 @@ class Game:
         self.score_pos = (350, 20)
         self.level = 1
         self.moving_puyos = []
-        self.moving_puyos_speed = 0.15
+        self.moving_puyos_speed = 0.15 # tombé des puyos
         self.current_puyo = None
         self.next_puyo = None
         self.clock = pygame.time.Clock()
@@ -109,65 +109,10 @@ class Game:
         self.lock_delay = 1000
 
         self.spawn_puyo()
-
-
-    def spawn_explosion(self, color, position):
-        current_time = pygame.time.get_ticks()
-        self.explosions.append({
-            'color': color,
-            'position': position,
-            'frame_index': 0,
-            'start_time': current_time,
-            'delay_start': current_time,  # Enregistre le début du délai après l'explosion
-            'delay_passed': False  # Indicateur si le délai après explosion est passé
-        })
-
-    def update_explosions(self):
-        current_time = pygame.time.get_ticks()
-        allow_puyo_drop = True
-        
-        for explosion in self.explosions[:]:
-            time_elapsed = current_time - explosion['start_time']
-            explosion['frame_index'] = time_elapsed // 150
-
-            if explosion['frame_index'] >= 4:
-                if not explosion['delay_passed'] and current_time - explosion['delay_start'] < self.explosion_delay:
-                    allow_puyo_drop = False 
-                    explosion['delay_passed'] = True 
-                elif current_time - explosion['delay_start'] >= self.explosion_delay:
-                    # Le délai est passé, l'explosion peut être retirée
-                    self.explosions.remove(explosion)
-                else:
-                    allow_puyo_drop = False
-            else:
-                allow_puyo_drop = False  # Une explosion est toujours en cours, pas de chute des Puyos
-
-        self.allow_puyo_drop = allow_puyo_drop
-
-    def update_score(self):
-        for i in range(1, self.combo_counter + 1):
-            self.score += i * 10 + 10
-        self.combo_counter = 0
-        
-        
-    def draw_explosion(self, screen, explosion):
-        texture = self.explosion_textures[explosion['color']]
-        frame_width = 32  
-        frame_height = texture.get_height()  
-
-        offset_x = explosion['frame_index'] * frame_width
-        source_rect = pygame.Rect(offset_x, 0, frame_width, frame_height)
-
-        position = explosion['position']
-        destination_x = position[0] * self.puyo_size * self.scale_factor 
-        destination_y = position[1] * self.puyo_size * self.scale_factor
-        destination_width = frame_width * self.expl_scale_factor
-        destination_height = frame_height * self.expl_scale_factor
-        destination_rect = pygame.Rect(destination_x, destination_y, destination_width, destination_height)
-
-        scaled_explosion = pygame.transform.scale(texture.subsurface(source_rect), (destination_width, destination_height))
-        screen.blit(scaled_explosion, destination_rect.topleft)
-
+    
+    # # # # # # # # #
+    #     Puyos     #
+    # # # # # # # # #
     
     def draw_puyo(self, screen, color_key, position, is_moving=False):
         if is_moving:
@@ -200,34 +145,6 @@ class Game:
     def spawn_moving_puyo(self, color, start_pos):
         moving_puyo = Puyo(color, start_pos)
         self.moving_puyos.append(moving_puyo)
-
-    def handle_events(self):
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
-                self.running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT or event.key == pygame.K_q:
-                    self.move_puyo(-1)
-                elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
-                    self.move_puyo(1)
-                if event.key == pygame.K_l or event.key == pygame.K_w:
-                    self.play_rotate_sound()
-                    self.current_puyo.rotate("left",self.board)
-                    self.rotation_since_last_collision += 1
-                    if self.rotation_since_last_collision < self.max_rotations_before_lock:
-                        self.last_collision_time = pygame.time.get_ticks()
-                elif event.key == pygame.K_m or event.key == pygame.K_x:
-                    self.play_rotate_sound()
-                    self.current_puyo.rotate("right",self.board)
-                    self.rotation_since_last_collision += 1
-                    if self.rotation_since_last_collision < self.max_rotations_before_lock:
-                        self.last_collision_time = pygame.time.get_ticks()
-
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
-            self.drop_speed = 0.3
-        else:
-            self.drop_speed = 0.05
 
     def move_puyo(self, direction):
         new_position1 = [self.current_puyo.puyo1.position[0] + direction, self.current_puyo.puyo1.position[1]]
@@ -281,32 +198,6 @@ class Game:
             self.last_collision_time = pygame.time.get_ticks()
             self.rotation_since_last_collision = 0
 
-    def is_collision(self, position):
-        x, y = position
-        y = int(y)  
-        if y >= 12 or (y >= 0 and self.board[y][x] is not None):
-            return True
-        return False
-
-    def place_puyo(self):
-        x1, y1 = int(self.current_puyo.puyo1.position[0]), int(self.current_puyo.puyo1.position[1])
-        x2, y2 = int(self.current_puyo.puyo2.position[0]), int(self.current_puyo.puyo2.position[1])
-
-        can_place_puyo1 = y1 + 1 < len(self.board) and self.board[y1 + 1][x1] is not None
-        can_place_puyo2 = y2 + 1 < len(self.board) and self.board[y2 + 1][x2] is not None
-
-        if y1 < 12 and (can_place_puyo1 or y1 + 1 == len(self.board)):
-            self.board[y1][x1] = self.current_puyo.puyo1.color
-        else:
-            self.spawn_moving_puyo(self.current_puyo.puyo1.color, [x1, y1])
-        if y2 < 12 and (can_place_puyo2 or y2 + 1 == len(self.board)):
-            self.board[y2][x2] = self.current_puyo.puyo2.color
-        else:
-            self.spawn_moving_puyo(self.current_puyo.puyo2.color, [x2, y2])
-        self.play_place_sound()
-        self.check_for_matches()
-
-
     # Fonction de recherche en profondeur pour trouver des groupes de puyos de la même couleur
     def dfs(self, x, y, color, visited):
         if (x, y) in visited or x < 0 or x >= len(self.board[0]) or y < 0 or y >= len(self.board) or self.board[y][x] != color:
@@ -345,7 +236,128 @@ class Game:
                         if self.board[above_y][x] is not None:
                             self.spawn_moving_puyo(self.board[above_y][x], [x, above_y])
                             self.board[above_y][x] = None 
-                            break  
+                            break       
+
+    def place_puyo(self):
+        x1, y1 = int(self.current_puyo.puyo1.position[0]), int(self.current_puyo.puyo1.position[1])
+        x2, y2 = int(self.current_puyo.puyo2.position[0]), int(self.current_puyo.puyo2.position[1])
+
+        can_place_puyo1 = y1 + 1 < len(self.board) and self.board[y1 + 1][x1] is not None
+        can_place_puyo2 = y2 + 1 < len(self.board) and self.board[y2 + 1][x2] is not None
+
+        if y1 < 12 and (can_place_puyo1 or y1 + 1 == len(self.board)):
+            self.board[y1][x1] = self.current_puyo.puyo1.color
+        else:
+            self.spawn_moving_puyo(self.current_puyo.puyo1.color, [x1, y1])
+        if y2 < 12 and (can_place_puyo2 or y2 + 1 == len(self.board)):
+            self.board[y2][x2] = self.current_puyo.puyo2.color
+        else:
+            self.spawn_moving_puyo(self.current_puyo.puyo2.color, [x2, y2])
+        self.play_place_sound()
+        self.check_for_matches()                   
+
+    # # # # # # # # #
+    #    Hotkeys    #
+    # # # # # # # # #
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
+                self.running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT or event.key == pygame.K_q:
+                    self.move_puyo(-1)
+                elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
+                    self.move_puyo(1)
+                if event.key == pygame.K_l or event.key == pygame.K_w:
+                    self.play_rotate_sound()
+                    self.current_puyo.rotate("left",self.board)
+                    self.rotation_since_last_collision += 1
+                    if self.rotation_since_last_collision < self.max_rotations_before_lock:
+                        self.last_collision_time = pygame.time.get_ticks()
+                elif event.key == pygame.K_m or event.key == pygame.K_x:
+                    self.play_rotate_sound()
+                    self.current_puyo.rotate("right",self.board)
+                    self.rotation_since_last_collision += 1
+                    if self.rotation_since_last_collision < self.max_rotations_before_lock:
+                        self.last_collision_time = pygame.time.get_ticks()
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_DOWN] or keys[pygame.K_s]:
+            self.drop_speed = 0.3
+        else:
+            self.drop_speed = 0.05
+
+    # # # # # # # # #
+    #   Collisions  #
+    # # # # # # # # #
+
+    def is_collision(self, position):
+        x, y = position
+        y = int(y)  
+        if y >= 12 or (y >= 0 and self.board[y][x] is not None):
+            return True
+        return False
+
+    # # # # # # # # #
+    #   Explosions  #
+    # # # # # # # # #
+
+    def spawn_explosion(self, color, position):
+        current_time = pygame.time.get_ticks()
+        self.explosions.append({
+            'color': color,
+            'position': position,
+            'frame_index': 0,
+            'start_time': current_time,
+            'delay_start': current_time,  # Enregistre le début du délai après l'explosion
+            'delay_passed': False  # Indicateur si le délai après explosion est passé
+        })
+
+    def update_explosions(self):
+        current_time = pygame.time.get_ticks()
+        allow_puyo_drop = True
+        
+        for explosion in self.explosions[:]:
+            time_elapsed = current_time - explosion['start_time']
+            explosion['frame_index'] = time_elapsed // 150
+
+            if explosion['frame_index'] >= 4:
+                if not explosion['delay_passed'] and current_time - explosion['delay_start'] < self.explosion_delay:
+                    allow_puyo_drop = False 
+                    explosion['delay_passed'] = True 
+                elif current_time - explosion['delay_start'] >= self.explosion_delay:
+                    # Le délai est passé, l'explosion peut être retirée
+                    self.explosions.remove(explosion)
+                else:
+                    allow_puyo_drop = False
+            else:
+                allow_puyo_drop = False  # Une explosion est toujours en cours, pas de chute des Puyos
+
+        self.allow_puyo_drop = allow_puyo_drop
+        
+    def draw_explosion(self, screen, explosion):
+        texture = self.explosion_textures[explosion['color']]
+        frame_width = 32  
+        frame_height = texture.get_height()  
+
+        offset_x = explosion['frame_index'] * frame_width
+        source_rect = pygame.Rect(offset_x, 0, frame_width, frame_height)
+
+        position = explosion['position']
+        destination_x = position[0] * self.puyo_size * self.scale_factor 
+        destination_y = position[1] * self.puyo_size * self.scale_factor
+        destination_width = frame_width * self.expl_scale_factor
+        destination_height = frame_height * self.expl_scale_factor
+        destination_rect = pygame.Rect(destination_x, destination_y, destination_width, destination_height)
+
+        scaled_explosion = pygame.transform.scale(texture.subsurface(source_rect), (destination_width, destination_height))
+        screen.blit(scaled_explosion, destination_rect.topleft)
+
+
+    # # # # # # # # #
+    #     Sounds    #
+    # # # # # # # # #
                         
     def play_combo_sound(self, combo_level):
         sound_map = {
@@ -375,6 +387,10 @@ class Game:
         sound = pygame.mixer.Sound(get_asset_path(os.path.join('assets', 'sounds','Global', 'VAB_00001_puyo_chakuchi.wav')))
         sound.set_volume(0.03)
         sound.play()
+
+    # # # # # # # # # # # # # #
+    #     General Gameplay    #
+    # # # # # # # # # # # # # #
 
     # on regarde si un puyo est posé sur la ligne 0                    
     def DetectDefeat(self):
@@ -420,6 +436,12 @@ class Game:
         
         frame_rect = pygame.Rect(frame_x, frame_y, board_width + frame_thickness * 2, board_height + frame_thickness * 2)
         pygame.draw.rect(screen, frame_color, frame_rect, frame_thickness)
+
+    # Nb chain * 10 + 10
+    def update_score(self):
+        for i in range(1, self.combo_counter + 1):
+            self.score += i * 10 + 10
+        self.combo_counter = 0
 
     def draw_score(self):
         score_str = str(self.score)
@@ -471,6 +493,10 @@ class Game:
             self.draw(self.screen)
             self.DetectDefeat()
             self.clock.tick(FPS)
+        
+# # # # # # # # # # # # # #
+#        Puyo Class       #
+# # # # # # # # # # # # # #
 
 class Puyo:
     def __init__(self, color, position):

@@ -81,6 +81,10 @@ class Map:
     #
     #
 
+    # # # # # # # # #
+    #     Visual    #
+    # # # # # # # # #
+
     def draw_map(self):
         for row in range(self.rows):
             for col in range(self.cols):
@@ -96,6 +100,10 @@ class Map:
     def draw_enemy(self):
         self.screen.blit(self.enemy_image, (self.enemy_pos[1] * self.tile_size, self.enemy_pos[0] * self.tile_size))
         self.screen.blit(self.enemy_image2, (self.enemy_pos2[1] * self.tile_size, self.enemy_pos2[0] * self.tile_size))
+
+    # # # # # # # # # #
+    #     Hotkeys     #
+    # # # # # # # # # #
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -114,6 +122,10 @@ class Map:
                 if self.map[self.player_pos[0]][self.player_pos[1]] != 0:
                     self.player_pos = prev_pos
 
+    # # # # # # # # # # #
+    #     Collisions    #
+    # # # # # # # # # # #
+
     # collision = match
     def check_collision(self):
         player_pos_tuple = tuple(self.player_pos)
@@ -122,6 +134,7 @@ class Map:
 
         if player_pos_tuple == enemy_pos_tuple:
             self.start_puyo_match(self.enemy_pos)
+
         elif player_pos_tuple == enemy_pos2_tuple:
             self.start_puyo_match(self.enemy_pos2)
 
@@ -132,28 +145,48 @@ class Map:
         pygame.display.set_caption("Match Puyo")
 
         self.game_started = True
-        print("Match Puyo contre ennemi", enemy_type)
         game = Game(self.screen, enemy_type)
         game.run()
         while True:
             if not game.running:
                 self.running = False
                 break
+        
+    # # # # # # # # # # #
+    #    Game update    #
+    # # # # # # # # # # #
             
-            
+    def calculate_distance(self, pos1, pos2):
+        return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
+        
     def update(self):
         self.enemy_update_cpt += 1
         if self.enemy_update_cpt >= self.enemy_update_rate:
             self.enemy_update_cpt = 0
-            temp_enemy_pos1 = self.update_enemy_position(self.enemy_pos, self.enemy_pos2)
-            temp_enemy_pos2 = self.update_enemy_position(self.enemy_pos2, self.enemy_pos)
 
-            if temp_enemy_pos1 != self.enemy_pos:
-                self.enemy_pos = temp_enemy_pos1
-            if temp_enemy_pos2 != self.enemy_pos2:
-                self.enemy_pos2 = temp_enemy_pos2
-        
-        self.check_collision()
+            distance_enemy1 = self.calculate_distance(self.enemy_pos, self.player_pos)
+            distance_enemy2 = self.calculate_distance(self.enemy_pos2, self.player_pos)
+
+            if distance_enemy1 > distance_enemy2:
+                first_enemy, second_enemy = self.enemy_pos, self.enemy_pos2
+            else:
+                first_enemy, second_enemy = self.enemy_pos2, self.enemy_pos
+
+            temp_first_enemy_pos = self.update_enemy_position(first_enemy, second_enemy)
+            if temp_first_enemy_pos != first_enemy:
+                first_enemy = temp_first_enemy_pos
+
+            temp_second_enemy_pos = self.update_enemy_position(second_enemy, first_enemy)
+            if temp_second_enemy_pos != second_enemy and temp_second_enemy_pos != first_enemy:
+                second_enemy = temp_second_enemy_pos
+
+            if distance_enemy1 > distance_enemy2:
+                self.enemy_pos, self.enemy_pos2 = first_enemy, second_enemy
+            else:
+                self.enemy_pos2, self.enemy_pos = first_enemy, second_enemy
+
+            self.check_collision()
+
 
     def draw(self):
         if self.state == 'PREGAME' or self.state == 'PLAYING':
