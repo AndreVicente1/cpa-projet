@@ -82,6 +82,7 @@ class Game:
         self.texture = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'puyos_tile.png'))).convert_alpha()  
         self.cross_texture = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'redcross.png'))).convert_alpha()  
         self.font_sprite_sheet = pygame.image.load(get_asset_path(os.path.join('assets','images','fonts_yellow.png'))).convert_alpha()
+        self.character = pygame.image.load(get_asset_path(os.path.join('assets', 'images',  'Screenshot_13.png'))).convert()
         self.scale_factor = 3
         self.expl_scale_factor = 2
         self.puyo_size = 16
@@ -284,14 +285,22 @@ class Game:
 
     def place_puyo(self):
         x1, y1 = int(self.current_puyo.puyo1.position[0]), int(self.current_puyo.puyo1.position[1])
-        if y1 < 12:
-            self.board[y1][x1] = self.current_puyo.puyo1.color
-
         x2, y2 = int(self.current_puyo.puyo2.position[0]), int(self.current_puyo.puyo2.position[1])
-        if y2 < 12:
+
+        can_place_puyo1 = y1 + 1 < len(self.board) and self.board[y1 + 1][x1] is not None
+        can_place_puyo2 = y2 + 1 < len(self.board) and self.board[y2 + 1][x2] is not None
+
+        if y1 < 12 and (can_place_puyo1 or y1 + 1 == len(self.board)):
+            self.board[y1][x1] = self.current_puyo.puyo1.color
+        else:
+            self.spawn_moving_puyo(self.current_puyo.puyo1.color, [x1, y1])
+        if y2 < 12 and (can_place_puyo2 or y2 + 1 == len(self.board)):
             self.board[y2][x2] = self.current_puyo.puyo2.color
+        else:
+            self.spawn_moving_puyo(self.current_puyo.puyo2.color, [x2, y2])
         self.play_place_sound()
         self.check_for_matches()
+
 
     # Fonction de recherche en profondeur pour trouver des groupes de puyos de la même couleur
     def dfs(self, x, y, color, visited):
@@ -429,8 +438,13 @@ class Game:
             self.screen.blit(nombre_surface, (x1, y1))
             x1 += width * self.scale_factor 
 
+    def draw_character(self):
+        self.character = pygame.transform.scale(self.character, (170, 170))
+        self.screen.blit(self.character, (350, 130))
+
     def draw(self, screen):
         screen.fill(BLACK)
+        self.draw_character()
         self.draw_score()
         self.draw_board_frame(screen)
         self.draw_board(screen)
