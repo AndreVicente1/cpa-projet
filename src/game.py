@@ -53,8 +53,8 @@ FONT_NUMBER_MAP = {
 }
 FONT_LETTER_MAP = {
     'S': {'x': 107, 'width': 9, 'row': 2},
-    'C': {'x': 107, 'width': 9, 'row': 1},
-    'O': {'x': 72, 'width': 9, 'row': 2},
+    'C': {'x': 107, 'width': 10, 'row': 1},
+    'O': {'x': 72, 'width': 8, 'row': 2},
     'R': {'x': 98, 'width': 9, 'row': 2},
     'E': {'x': 125, 'width': 9, 'row': 1}
 }
