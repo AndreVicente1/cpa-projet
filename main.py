@@ -1,24 +1,26 @@
+import os
 import pygame
 import sys
-from src.game import Game
+from src.game import Game, get_asset_path
 from src.settings import SCREEN_WIDTH, SCREEN_HEIGHT, FPS
 from src.map import Map
 
 #python3 -m PyInstaller --onefile --windowed --add-data "assets;assets" main.py 
 def draw_menu(screen):
-    screen.fill((0, 0, 0))
+    background_image = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'background', 'menu.jpg'))).convert()
+    background_image = pygame.transform.scale(background_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
+    #background
+    screen.blit(background_image, (0, 0))
     font = pygame.font.SysFont(None, 55)
     
     # Bouton Jouer
-    text_jouer = font.render('Jouer', True, (255, 255, 255))
+    text_jouer = font.render('Jouer', True, (255, 0, 0))
     button_jouer = text_jouer.get_rect(center=(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 30))
-    pygame.draw.rect(screen, (0, 128, 0), button_jouer)
     screen.blit(text_jouer, button_jouer)
     
     # Bouton Mode Histoire
-    text_mode_histoire = font.render('Mode Histoire', True, (255, 255, 255))
+    text_mode_histoire = font.render('Mode Histoire', True, (0, 0, 0))
     button_mode_histoire = text_mode_histoire.get_rect(center=(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 30))
-    pygame.draw.rect(screen, (0, 128, 0), button_mode_histoire)
     screen.blit(text_mode_histoire, button_mode_histoire)
     
     return button_jouer, button_mode_histoire

@@ -113,6 +113,9 @@ class Game:
         self.max_rotations_before_lock = 5
         self.lock_delay = 1000
 
+        self.background_image = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'background', 'game.jpg'))).convert()
+        self.background_image = pygame.transform.scale(self.background_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
         self.has_won = False # victoire
 
         self.spawn_puyo()
@@ -494,7 +497,9 @@ class Game:
             screen.blit(text, text_rect)
 
     def draw(self, screen):
-        screen.fill(BLACK)
+        #background
+        screen.blit(self.background_image, (0, 0))
+        
         self.draw_character()
         self.draw_score()
         self.draw_board_frame(screen)
@@ -510,6 +515,7 @@ class Game:
 
         if self.has_won:
             self.draw_victory_message(screen)
+
 
         pygame.display.flip()
 
