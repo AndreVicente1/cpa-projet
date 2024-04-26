@@ -218,6 +218,10 @@ class Map:
 
             self.check_collision()
 
+    #
+    # RAYCASTING
+    #
+
     def get_direction(self):
         """Récupère la direction du joueur en fonction de la position de la souris"""
         mx, my = pygame.mouse.get_pos()
