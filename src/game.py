@@ -14,6 +14,15 @@ def get_asset_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
+def load_best_score():
+    try:
+        with open(get_asset_path(os.path.join('save.txt')), 'r') as file:
+            return int(file.read().strip())
+    except FileNotFoundError:
+        return 0
+    except ValueError:
+        return 0
+
 # Utilisés pour les textures des puyos
 PUYO_COLORS = ['red', 'green', 'blue', 'yellow', 'purple']
 PUYO_COLOR_MAP = {
@@ -429,6 +438,13 @@ class Game:
     #     General Gameplay    #
     # # # # # # # # # # # # # #
 
+    def update_best_score(self):
+        """Mise à jour du meilleur score si le score actuel est supérieur"""
+        best_score = load_best_score()
+        if self.score > best_score:
+            with open(get_asset_path(os.path.join('save.txt')), 'w') as file:
+                file.write(str(self.score))
+
     # on regarde si un puyo est posé sur la ligne 0                    
     def DetectDefeat(self):
         """"Vérifie si le joueur a perdu en regardant si un puyo est posé tout en haut du plateau"""
@@ -443,6 +459,7 @@ class Game:
         self.update_explosions()  
         if not self.moving_puyos and not self.explosions: # combo terminé
             self.update_score()
+            self.update_best_score()
         if self.allow_puyo_drop and not self.explosions:
             if current_time - self.last_drop_time > (self.drop_speed * 5):
                 self.update_moving_puyos()  

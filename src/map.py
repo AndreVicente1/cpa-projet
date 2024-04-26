@@ -1,4 +1,6 @@
+import math
 import os
+import numpy
 import pygame
 import sys
 from src.settings import SCREEN_WIDTH, SCREEN_HEIGHT, FPS
@@ -58,6 +60,9 @@ class Map:
         self.enemy_update_rate = 15  # Nombre d'itérations entre chaque mise à jour de la position de l'ennemi
         self.enemy_update_cpt = 0
 
+        # Systeme de vision (Fog of War)
+        self.view_distance = 10  # distance de vision
+        self.view_angle = math.radians(60) # angle de vision
     
     #
     # ASTAR algorithm application
@@ -90,20 +95,30 @@ class Map:
     # # # # # # # # #
 
     def draw_map(self):
+        """Affiche la carte du jeu"""
+        visible_points = self.update_visibility() # points visibles par le joueur
         for row in range(self.rows):
             for col in range(self.cols):
-                color = (100, 100, 100) if (row + col) % 2 == 0 else (150, 150, 150)
-                pygame.draw.rect(self.screen, color, (col * self.tile_size, row * self.tile_size, self.tile_size, self.tile_size))
-                # murs
+                # les murs restent visibles
                 if self.map[row][col] == 1:
-                    pygame.draw.rect(self.screen, (0, 0, 0), (col * self.tile_size, row * self.tile_size, self.tile_size, self.tile_size))
+                    color = (0, 0, 0)
+                elif (col, row) in visible_points:
+                    color = (150, 150, 150) # visible
+                else:
+                    color = (50, 50, 50) # non visible
+
+                pygame.draw.rect(self.screen, color, (col * self.tile_size, row * self.tile_size, self.tile_size, self.tile_size))
 
     def draw_player(self):
+        """Affiche le joueur"""
         self.screen.blit(self.player_image, (self.player_pos[1] * self.tile_size, self.player_pos[0] * self.tile_size))
 
-    def draw_enemy(self):
-        self.screen.blit(self.enemy_image, (self.enemy_pos[1] * self.tile_size, self.enemy_pos[0] * self.tile_size))
-        self.screen.blit(self.enemy_image2, (self.enemy_pos2[1] * self.tile_size, self.enemy_pos2[0] * self.tile_size))
+    def draw_enemy(self, visible_points):
+        """Affiche les ennemis s'ils sont visibles par le joueur"""
+        if (self.enemy_pos[1], self.enemy_pos[0]) in visible_points:
+            self.screen.blit(self.enemy_image, (self.enemy_pos[1] * self.tile_size, self.enemy_pos[0] * self.tile_size))
+        if (self.enemy_pos2[1], self.enemy_pos2[0]) in visible_points:
+            self.screen.blit(self.enemy_image2, (self.enemy_pos2[1] * self.tile_size, self.enemy_pos2[0] * self.tile_size))
 
 
     # # # # # # # # # #
@@ -161,9 +176,9 @@ class Map:
                 break
 
         
-    # # # # # # # # # # #
-    #    Game update    #
-    # # # # # # # # # # #
+    # # # # # # # # # # # # # # # #
+    #    Game update & Gameplay   #
+    # # # # # # # # # # # # # # # #
             
     def calculate_distance(self, pos1, pos2):
         """Distance Manhattan"""
@@ -198,12 +213,43 @@ class Map:
 
             self.check_collision()
 
+    def get_direction(self):
+        """Récupère la direction du joueur en fonction de la position de la souris"""
+        mx, my = pygame.mouse.get_pos()
+        px, py = self.player_pos[1] * self.tile_size + self.tile_size // 2, self.player_pos[0] * self.tile_size + self.tile_size // 2
+        dx, dy = mx - px, my - py # vecteur entre le joueur et la souris
+        distance = math.hypot(dx, dy)
+        if distance == 0: # souris sur le joueur
+            return (0, 0)
+        return (dx / distance, dy / distance)
 
+    def update_visibility(self):
+        """Met à jour la visibilité du joueur en fonction de sa direction"""
+        direction = self.get_direction()
+        visible_points = set()
+        angles = [-self.view_angle / 2, 0, self.view_angle / 2]
+
+        for angle in angles:
+            dx, dy = math.cos(math.atan2(direction[1], direction[0]) + angle), math.sin(math.atan2(direction[1], direction[0]) + angle)
+            x, y = self.player_pos[1], self.player_pos[0]
+            for _ in range(self.view_distance):
+                x += dx
+                y += dy
+                ix, iy = int(x), int(y)
+                if not (0 <= ix < self.cols and 0 <= iy < self.rows):
+                    break
+                visible_points.add((ix, iy))
+                if self.map[iy][ix] == 1:
+                    break
+
+        return visible_points
+    
     def draw(self):
         self.screen.fill((0, 0, 0))
         self.draw_map()
         self.draw_player()
-        self.draw_enemy()
+        visible_points = self.update_visibility()
+        self.draw_enemy(visible_points)
         pygame.display.flip()
 
     def run(self):
@@ -212,4 +258,3 @@ class Map:
             self.update()
             self.draw()
             self.clock.tick(FPS)
-        
