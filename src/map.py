@@ -25,19 +25,24 @@ class Map:
 
         self.screen = screen
         self.clock = pygame.time.Clock()
-        self.rows, self.cols = 10, 15
+        self.rows, self.cols = 15, 20
 
         self.map = [
-            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+            [0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0],
+            [0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1],
+            [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1],
+            [0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+            [0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0, 1, 0, 1],
+            [1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1],
+            [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1],
+            [0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 1],
+            [0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0],
+            [0, 1, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1],
+            [0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 1],
+            [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 0]
         ]
 
         self.player_pos = [1, 1]
@@ -57,7 +62,7 @@ class Map:
         self.state = "PREGAME"
         self.game_started = False # Match puyo
 
-        self.enemy_update_rate = 15  # Nombre d'itérations entre chaque mise à jour de la position de l'ennemi
+        self.enemy_update_rate = 20  # Nombre d'itérations entre chaque mise à jour de la position de l'ennemi
         self.enemy_update_cpt = 0
 
         # Systeme de vision (Fog of War)
@@ -227,19 +232,21 @@ class Map:
         """Met à jour la visibilité du joueur en fonction de sa direction"""
         direction = self.get_direction()
         visible_points = set()
-        angles = [-self.view_angle / 2, 0, self.view_angle / 2]
+        angles = [-self.view_angle / 2 + i * self.view_angle / 19 for i in range(20)] # cone de vision
 
         for angle in angles:
             dx, dy = math.cos(math.atan2(direction[1], direction[0]) + angle), math.sin(math.atan2(direction[1], direction[0]) + angle)
             x, y = self.player_pos[1], self.player_pos[0]
             for _ in range(self.view_distance):
+                # calcul du rayon sur la matrice
                 x += dx
                 y += dy
                 ix, iy = int(x), int(y)
                 if not (0 <= ix < self.cols and 0 <= iy < self.rows):
                     break
                 visible_points.add((ix, iy))
-                if self.map[iy][ix] == 1:
+                
+                if self.map[iy][ix] == 1: # les murs bloquent le champ de vision
                     break
 
         return visible_points
