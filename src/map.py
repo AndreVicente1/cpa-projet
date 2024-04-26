@@ -6,8 +6,7 @@ from src.game import Game
 from src.algorithms.astar import astar
 
 def get_asset_path(relative_path):
-    """Constructs a path to the given asset, which is valid whether the
-    application is frozen or run as a Python script."""
+    """Construit un chemin d'accès vers la ressource indiquée"""
     if getattr(sys, 'frozen', False):
         base_path = sys._MEIPASS
     else:
@@ -16,10 +15,12 @@ def get_asset_path(relative_path):
 
 class Map:
     def __init__(self, screen):
+        # Initialisation son
         pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
-        pygame.mixer.music.load(get_asset_path(os.path.join('assets', 'music', 'final.mp3')))
-        pygame.mixer.music.set_volume(0.01)  
+        pygame.mixer.music.load(get_asset_path(os.path.join('assets', 'music', 'wc3.mp3')))
+        pygame.mixer.music.set_volume(0.05)  
         pygame.mixer.music.play(loops=-1) 
+
         self.screen = screen
         self.clock = pygame.time.Clock()
         self.rows, self.cols = 10, 15
@@ -45,12 +46,13 @@ class Map:
         self.enemy_image2 = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'characters','OceanKing.png'))).convert_alpha()  # ennemi 2
         
         self.tile_size = 40
+        # mise à l'échelle
         self.player_image = pygame.transform.scale(self.player_image, (self.tile_size, self.tile_size))
         self.enemy_image = pygame.transform.scale(self.enemy_image, (self.tile_size, self.tile_size))
         self.enemy_image2 = pygame.transform.scale(self.enemy_image2, (self.tile_size, self.tile_size))
 
         self.running = True
-        self.state = 'PREGAME'
+        self.state = "PREGAME"
         self.game_started = False # Match puyo
 
         self.enemy_update_rate = 15  # Nombre d'itérations entre chaque mise à jour de la position de l'ennemi
@@ -62,11 +64,13 @@ class Map:
     #
 
     def find_path(self, start_pos, end_pos, grid):
+        """ Déterminer le chemin que les ennemis doivent emprunter pour atteindre le joueur """
         path = astar(start_pos, end_pos, grid)
         return path
 
 
     def update_enemy_position(self, enemy_pos, enemy_pos2):
+        """Met à jour la position d'un ennemi en évitant les collisions avec l'autre ennemi"""
         tmp = [row[:] for row in self.map]
         tmp[enemy_pos2[0]][enemy_pos2[1]] = 1  # Marque l'autre ennemi comme un mur
 
@@ -101,16 +105,18 @@ class Map:
         self.screen.blit(self.enemy_image, (self.enemy_pos[1] * self.tile_size, self.enemy_pos[0] * self.tile_size))
         self.screen.blit(self.enemy_image2, (self.enemy_pos2[1] * self.tile_size, self.enemy_pos2[0] * self.tile_size))
 
+
     # # # # # # # # # #
     #     Hotkeys     #
     # # # # # # # # # #
 
     def handle_events(self):
+        """Gère les touches de l'utilisateur pour contrôler le jeu"""
         for event in pygame.event.get():
             if event.type == pygame.QUIT  or (event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 self.running = False
             elif event.type == pygame.KEYDOWN:
-                prev_pos = list(self.player_pos)
+                prev_pos = list(self.player_pos) # position précédente pour annuler un déplacement non valide (mur)
                 if event.key == pygame.K_LEFT or event.key == pygame.K_q:
                     self.player_pos[1] = max(0, self.player_pos[1] - 1)
                 elif event.key == pygame.K_RIGHT or event.key == pygame.K_d:
@@ -119,8 +125,9 @@ class Map:
                     self.player_pos[0] = max(0, self.player_pos[0] - 1)
                 elif event.key == pygame.K_DOWN  or event.key == pygame.K_s:
                     self.player_pos[0] = min(self.rows - 1, self.player_pos[0] + 1)
-                if self.map[self.player_pos[0]][self.player_pos[1]] != 0:
+                if self.map[self.player_pos[0]][self.player_pos[1]] != 0: # reset position
                     self.player_pos = prev_pos
+
 
     # # # # # # # # # # #
     #     Collisions    #
@@ -128,6 +135,7 @@ class Map:
 
     # collision = match
     def check_collision(self):
+        """Vérifie les collisions entre le joueur et les ennemis pour déclencher un match de Puyo"""
         player_pos_tuple = tuple(self.player_pos)
         enemy_pos_tuple = tuple(self.enemy_pos)
         enemy_pos2_tuple = tuple(self.enemy_pos2)
@@ -151,15 +159,18 @@ class Map:
             if not game.running:
                 self.running = False
                 break
+
         
     # # # # # # # # # # #
     #    Game update    #
     # # # # # # # # # # #
             
     def calculate_distance(self, pos1, pos2):
+        """Distance Manhattan"""
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
         
     def update(self):
+        """Met à jour régulièrement l'état du jeu, en calculant les déplacements des ennemis et en vérifiant les collisions"""
         self.enemy_update_cpt += 1
         if self.enemy_update_cpt >= self.enemy_update_rate:
             self.enemy_update_cpt = 0
@@ -189,18 +200,16 @@ class Map:
 
 
     def draw(self):
-        if self.state == 'PREGAME' or self.state == 'PLAYING':
-            self.screen.fill((0, 0, 0))
-            self.draw_map()
-            self.draw_player()
-            self.draw_enemy()
-            pygame.display.flip()
+        self.screen.fill((0, 0, 0))
+        self.draw_map()
+        self.draw_player()
+        self.draw_enemy()
+        pygame.display.flip()
 
     def run(self):
         while self.running:
             self.handle_events()
-            if self.state != 'PVP': 
-                self.update()
-                self.draw()
+            self.update()
+            self.draw()
             self.clock.tick(FPS)
         

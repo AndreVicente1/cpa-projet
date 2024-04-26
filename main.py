@@ -5,7 +5,8 @@ from src.game import Game, get_asset_path
 from src.settings import SCREEN_WIDTH, SCREEN_HEIGHT, FPS
 from src.map import Map
 
-#python3 -m PyInstaller --onefile --windowed --add-data "assets;assets" main.py 
+#Commande pour génerer un .exe: python3 -m PyInstaller --onefile --windowed --add-data "assets;assets" main.py 
+
 def draw_menu(screen):
     background_image = pygame.image.load(get_asset_path(os.path.join('assets', 'images', 'background', 'menu.jpg'))).convert()
     background_image = pygame.transform.scale(background_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -49,7 +50,7 @@ def main():
                     elif button_mode_histoire.collidepoint(event.pos):
                         in_menu = False
                         mode_histoire = True
-                        map = Map(screen)  # Initier la map pour le mode histoire
+                        map = Map(screen)  
         elif mode_histoire:
             map.handle_events()
             if not map.running:
@@ -61,7 +62,7 @@ def main():
                 map.run()
             else:
                 map.update()
-                map.draw()  # Corrigé pour ne pas passer 'screen'
+                map.draw()  
         else:
             game.handle_events()
             if not game.running:
